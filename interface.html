@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular.min.js"></script>
+    <script src="https://bitwiseshiftleft.github.io/sjcl/sjcl.js"></script>
+</head>
+
+<body ng-app="myApp" ng-controller="myCtrl">
+    <div ng-app="thang">
+        <label>Passphrase:</label>
+        <input type="text" ng-model="myPW" placeholder="Put in passphrase">
+        <h1>Passphrase is {{myPW}}</h1>
+        <h1>KDF is {{compKDF}}</h1>
+    </div>
+
+    <div>
+        <table>
+            <tr ng-repeat="x in logins">
+                <td>{{ x.login }}</td>
+                <td>{{ x.kdf }}</td>
+                <td>{{ x.topass}}</td>
+                <td><button ng-click="dokdf(x.kdf, x.topass)">GetKDF</button></td>
+            </tr>
+        </table>
+    </div>
+    <script>
+        function doPBKDF2(kdfspec, pw) {
+            var spec = kdfspec.split(":");
+            return "pbkdf2(" + pw + ", " + spec[1] + ", " + spec[2] + ")";
+        }
+        var app = angular.module('myApp', []);
+        app.controller('myCtrl', function($scope) {
+            $scope.dokdf = function(kdfspec, passspec) {
+                var spec = kdfspec.split(":");
+                if (spec[0] == "pbkdf2") {
+                    $scope.compKDF = doPBKDF2(kdfspec, $scope.myPW) + "callfun";
+                } else {
+                    $scope.compKDF = $scope.myPW + kdfspec;
+                }
+            }
+            $scope.compKDF = "not yet computed";
+            $scope.myPW = "not yet entered";
+
+            $scope.logins = [{
+                "kdf": "pbkdf2:100:saltysalt",
+                "login": "thelogin",
+                "topass": "nb64:10"
+            }, {
+                "kdf": "asdfasdf",
+                "login": "another",
+                "topass": "nb64:10"
+            }];
+        });
+    </script>
+</body>
+
+</html>
