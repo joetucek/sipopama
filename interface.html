@@ -8,23 +8,43 @@
   </head>
   
   <body ng-app="myApp" ng-controller="myCtrl">
-    <div ng-app="thang">
+    <div>
       <label>Passphrase:</label>
       <input type="text" ng-model="myPW" placeholder="Put in passphrase">
-      <h1>Passphrase is {{myPW}}</h1>
-      <h1>KDF is {{dispKDF}}</h1>
-      <h1>ToPASS is {{toPass}}</h1>
+      <div>KDF is {{dispKDF}}</div>
+      <div>ToPASS is {{toPass}}</div>
+    </div>
+    <div>
+      Add a new one:
+      <label>Label:</label>
+      <input type="text" ng-model="label" placeholder="Site label">
+      <label>Password type:</label>
+      <select name="kdfsel" ng-model="kdfselect">
+	<option value="pbkdf2">PBKDF2</option>
+	<option value="scrypt">scrypt</option>
+	<!-- Add in customization of kdf -->
+      </select>
+      <button ng-click="notimpl">Gimmie</button>
+    </div>
+    <div>
+      You are making one for {{label}} of tpe {{kdfselect}}
+    </div>
+    <div>
+      <table>
+	<tr ng-repeat="(key, value) in logins">
+          <td>{{ key }}</td>
+          <td>{{ value.kdf }}</td>
+          <td>{{ value.topass}}</td>
+          <td><button ng-click="dokdf(value.kdf, value.topass)">GetKDF</button></td>
+	</tr>
+      </table>
     </div>
     
     <div>
-      <table>
-	<tr ng-repeat="x in logins">
-          <td>{{ x.login }}</td>
-          <td>{{ x.kdf }}</td>
-          <td>{{ x.topass}}</td>
-          <td><button ng-click="dokdf(x.kdf, x.topass)">GetKDF</button></td>
-	</tr>
-      </table>
+      For export, copy paste:
+      <div>
+	{{exportForm}}
+      </div>
     </div>
     <script>
      var myScript;
@@ -38,6 +58,8 @@
      function doScrypt(kdfspec, pw) {
        var spec = kdfspec.split(":");
        //spec is scrypt:salt:r:N:p
+       //note that for javascript, increasing p is best bet since memory is
+       //constrained.
        return myScript.crypto_scrypt(myScript.encode_utf8(pw),
 				     myScript.encode_utf8(spec[1]),
 				     spec[2], spec[3], spec[4], 64);
@@ -73,26 +95,16 @@
 	 }
        }
        $scope.compKDF = "not yet computed";
-       $scope.myPW = "not yet entered";
-       scrypt_module_factory(on_ready);
+       //use 32MB
+       scrypt_module_factory(on_ready, {requested_total_memory: 32 * 1048576 });
 
-       $scope.logins = [{
-         "kdf": "pbkdf2:100:saltysalt",
-         "login": "thelogin",
-         "topass": "nb64:10"
-       }, {
-         "kdf": "pbkdf2:100000:asdfasdf",
-         "login": "another",
-         "topass": "nb64:10"
-       }, {
-         "kdf": "pbkdf2:2:salt",
-         "login": "pbkdftestvect",
-         "topass": "nb64:10"
-       }, {
-         "kdf": "scrypt:SodiumChloride:16384:8:1",
-         "login": "scrypttestvect",
-         "topass": "nb64:10"
-       }];
+       $scope.logins = {
+         "thelogin": {"kdf": "pbkdf2:100:saltysalt", "topass": "nb64:10"},
+	 "another": {"kdf": "pbkdf2:100000:asdfasdf", "topass": "nb64:10"},
+         "pbkdftestvect": {"kdf": "pbkdf2:2:salt",  "topass": "nb64:10"},
+         "scryptlongeryet": {"kdf": "scrypt:SodiumChloride:16384:8:5", "topass":"nb64:10"}
+       };
+       $scope.exportForm = JSON.stringify($scope.logins);
      });
      function on_ready(scrypt) {
        myScript=scrypt;
