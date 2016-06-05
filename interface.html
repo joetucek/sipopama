@@ -1,58 +1,103 @@
 <!doctype html>
 <html>
-
-<head>
+  
+  <head>
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular.min.js"></script>
     <script src="https://bitwiseshiftleft.github.io/sjcl/sjcl.js"></script>
-</head>
-
-<body ng-app="myApp" ng-controller="myCtrl">
+    <script src="scrypt.js"></script>
+  </head>
+  
+  <body ng-app="myApp" ng-controller="myCtrl">
     <div ng-app="thang">
-        <label>Passphrase:</label>
-        <input type="text" ng-model="myPW" placeholder="Put in passphrase">
-        <h1>Passphrase is {{myPW}}</h1>
-        <h1>KDF is {{compKDF}}</h1>
+      <label>Passphrase:</label>
+      <input type="text" ng-model="myPW" placeholder="Put in passphrase">
+      <h1>Passphrase is {{myPW}}</h1>
+      <h1>KDF is {{dispKDF}}</h1>
+      <h1>ToPASS is {{toPass}}</h1>
     </div>
-
+    
     <div>
-        <table>
-            <tr ng-repeat="x in logins">
-                <td>{{ x.login }}</td>
-                <td>{{ x.kdf }}</td>
-                <td>{{ x.topass}}</td>
-                <td><button ng-click="dokdf(x.kdf, x.topass)">GetKDF</button></td>
-            </tr>
-        </table>
+      <table>
+	<tr ng-repeat="x in logins">
+          <td>{{ x.login }}</td>
+          <td>{{ x.kdf }}</td>
+          <td>{{ x.topass}}</td>
+          <td><button ng-click="dokdf(x.kdf, x.topass)">GetKDF</button></td>
+	</tr>
+      </table>
     </div>
     <script>
-        function doPBKDF2(kdfspec, pw) {
-            var spec = kdfspec.split(":");
-            return "pbkdf2(" + pw + ", " + spec[1] + ", " + spec[2] + ")";
-        }
-        var app = angular.module('myApp', []);
-        app.controller('myCtrl', function($scope) {
-            $scope.dokdf = function(kdfspec, passspec) {
-                var spec = kdfspec.split(":");
-                if (spec[0] == "pbkdf2") {
-                    $scope.compKDF = doPBKDF2(kdfspec, $scope.myPW) + "callfun";
-                } else {
-                    $scope.compKDF = $scope.myPW + kdfspec;
-                }
-            }
-            $scope.compKDF = "not yet computed";
-            $scope.myPW = "not yet entered";
+     var myScript;
+     function doPBKDF2(kdfspec, pw) {
+       var spec = kdfspec.split(":");
+       //spec is pbkdf2:rounds:salt
+       return sjcl.misc.pbkdf2(sjcl.codec.utf8String.toBits(pw),
+			       sjcl.codec.utf8String.toBits(spec[2]),
+			       spec[1], 32*8);
+     }
+     function doScrypt(kdfspec, pw) {
+       var spec = kdfspec.split(":");
+       //spec is scrypt:salt:r:N:p
+       return myScript.crypto_scrypt(myScript.encode_utf8(pw),
+				     myScript.encode_utf8(spec[1]),
+				     spec[2], spec[3], spec[4], 64);
+     }
+     function doB64N(passspec, kdfed) {
+       var spec = passspec.split(":");
+       var numChars = parseInt(spec[1]);
+       var b64ed = sjcl.codec.base64.fromBits(kdfed, true, true);
+       return b64ed.substring(0, numChars);
+       
+     }
+     var app = angular.module('myApp', []);
+     app.controller('myCtrl', function($scope) {
+       $scope.dokdf = function(kdfspec, passspec) {
+         var spec = kdfspec.split(":");
+	 if (spec[0] == "pbkdf2") {
+           $scope.compKDF = doPBKDF2(kdfspec, $scope.myPW);
+	   $scope.dispKDF = sjcl.codec.hex.fromBits($scope.compKDF);
+         } else if (spec[0] == "scrypt") {
+	   //We round trip via hex to get into the sjcl format.
+	   $scope.compKDF = sjcl.codec.hex.toBits(myScript.to_hex
+	     (doScrypt(kdfspec, $scope.myPW)));
+	   $scope.dispKDF = sjcl.codec.hex.fromBits($scope.compKDF);
+	 } else {
+           $scope.compKDF = $scope.myPW + kdfspec;
+	 }
+	 
+	 var pspec = passspec.split(":");
+	 if(pspec[0] == "nb64") {
+	   $scope.toPass = doB64N(passspec, $scope.compKDF);
+	 } else {
+	   $scope.toPass = "invalid:" + passspec;
+	 }
+       }
+       $scope.compKDF = "not yet computed";
+       $scope.myPW = "not yet entered";
+       scrypt_module_factory(on_ready);
 
-            $scope.logins = [{
-                "kdf": "pbkdf2:100:saltysalt",
-                "login": "thelogin",
-                "topass": "nb64:10"
-            }, {
-                "kdf": "asdfasdf",
-                "login": "another",
-                "topass": "nb64:10"
-            }];
-        });
+       $scope.logins = [{
+         "kdf": "pbkdf2:100:saltysalt",
+         "login": "thelogin",
+         "topass": "nb64:10"
+       }, {
+         "kdf": "pbkdf2:100000:asdfasdf",
+         "login": "another",
+         "topass": "nb64:10"
+       }, {
+         "kdf": "pbkdf2:2:salt",
+         "login": "pbkdftestvect",
+         "topass": "nb64:10"
+       }, {
+         "kdf": "scrypt:SodiumChloride:16384:8:1",
+         "login": "scrypttestvect",
+         "topass": "nb64:10"
+       }];
+     });
+     function on_ready(scrypt) {
+       myScript=scrypt;
+     }
     </script>
-</body>
-
+  </body>
+  
 </html>
