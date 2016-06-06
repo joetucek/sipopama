@@ -1,8 +1,8 @@
 <!doctype html>
 <html>
-  
+  <!-- TODO clean up the MVC-arity of this -->
   <head>
-    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular.min.js"></script>
+    <script src="angular.min.js"></script>
     <script src="sjcl.js"></script>
     <script src="scrypt.js"></script>
     <script src="FileSaver.min.js"></script>
@@ -23,7 +23,7 @@
       <select name="kdfsel" ng-model="kdfselect">
 	<option value="pbkdf2">PBKDF2</option>
 	<option value="scrypt">scrypt</option>
-	<!-- Add in customization of kdf -->
+	<!-- Add in customization of kdf? -->
       </select>
       <label>Password type</label>
       <select name="pwsel" ng-model="pwselect">
@@ -99,7 +99,7 @@
        }
      }
      var app = angular.module('myApp', []);
-     app.controller('myCtrl', function($scope) {
+     app.controller('myCtrl', function($scope, $http) {
        sjcl.random.startCollectors();
 
        
@@ -138,12 +138,9 @@
        $scope.kdfselect="pbkdf2";
        $scope.pwselect="nb64";
        $scope.pbkdf2n=50000;
-       $scope.logins = {
-         "thelogin": {"kdf": "pbkdf2:100:saltysalt", "topass": "nb64:10"},
-	 "another": {"kdf": "pbkdf2:100000:asdfasdf", "topass": "nb64:10"},
-         "pbkdftestvect": {"kdf": "pbkdf2:2:salt",  "topass": "nb64:10"},
-         "scryptlongeryet": {"kdf": "scrypt:SodiumChloride:16384:8:5", "topass":"nb64:10"}
-       };
+       $http.get("./saved.json")
+	    .success(function(response) {$scope.logins = response;
+	      $scope.exportForm = JSON.stringify($scope.logins);});
        $scope.exportForm = JSON.stringify($scope.logins);
        $scope.targetFile="export.json";
      });
