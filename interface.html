@@ -13,7 +13,7 @@
   <body ng-app="myApp" ng-controller="myCtrl">
     <div>
       <label>Passphrase:</label>
-      <input type="text" ng-model="myPW" placeholder="Put in passphrase">
+      <input type="password" ng-model="myPW" placeholder="Put in passphrase">
       <!--  for debug only <div>KDF is {{dispKDF}}</div> -->
       <div>Password is is {{toPass}}</div>
     </div>
@@ -26,10 +26,17 @@
 	<option value="pbkdf2">PBKDF2</option>
 	<option value="scrypt">scrypt</option>
 	<!-- Add in customization of kdf? -->
+	<!-- TODO: figure out how to change defaults when selectbox changes -->
+	<!-- TODO: dont hardcode all of the scrypt params -->
       </select>
       <label>Password type</label>
       <select name="pwsel" ng-model="pwselect">
 	<option value="nb64">NB64</option>
+	<option value="nhex">NHEX</option>
+	<!-- TODO: add ndiceware or diceware with a spec.
+	     ala "w W w" == word Capword word, or "www" == wordanotherthird
+	     maybe l for letter, n for number, s for symbol, ' ' for space, etc
+	   -->
       </select>
       <div>
 	<label>PW Length:</label><input type="text" ng-model="pwlen">
@@ -58,6 +65,9 @@
     </div>
     
     <div>
+      <!-- TODO allow export to html5 localstorage -->
+      <!-- TODO allow export via postback to specificed URL (and import
+	   from same) -->
       <input type="text" ng-model="targetFile"><button ng-click="filesave(targetFile)">File Save</button> Or, copy paste:
       <div>
 	{{exportForm}}
@@ -84,7 +94,7 @@
      function dohexN(passspec, kdfed) {
        var spec = passspec.split(":");
        var numChars = parseInt(spec[1]);
-       var hexed = sjcl.codec.hex(fromBits(kdfed));
+       var hexed = sjcl.codec.hex.fromBits(kdfed);
        return hexed.substring(0, numChars);
      }
      function doB64N(passspec, kdfed) {
@@ -93,6 +103,16 @@
        var b64ed = sjcl.codec.base64.fromBits(kdfed, true, true);
        return b64ed.substring(0, numChars);
        
+     }
+     function passfromspec(passspec, inkdf) {
+       var spec = passspec.split(":");
+       if (spec[0] == "nb64") {
+	 return doB64N(passspec, inkdf);
+       } else if (spec[0] == "nhex") {
+	 return dohexN(passspec, inkdf);
+       } else {
+	 return "some sort of bug or something; this is bad";
+       }
      }
      function kdffromspec(kdfspec, inpw){
        var spec = kdfspec.split(":");
@@ -123,7 +143,7 @@
 	 }
 	 var derivedKDF=kdffromspec($scope.derivedKDFSpec, $scope.myPW);
 	 $scope.derivedtopass = pwsel + ":" + $scope.pwlen
-	 $scope.proposedPass = doB64N($scope.derivedtopass, derivedKDF);
+	 $scope.proposedPass = passfromspec($scope.derivedtopass, derivedKDF);
        }
        $scope.saveIT = function(kdfsel, pwsel, salt, n) {
 	 $scope.logins[$scope.label] = {"kdf": $scope.derivedKDFSpec, "topass": $scope.derivedtopass};
@@ -132,12 +152,7 @@
        $scope.dokdf = function(kdfspec, passspec) {
 	 var derivedKDF=kdffromspec(kdfspec, $scope.myPW);
 	 $scope.dispKDF = sjcl.codec.hex.fromBits(derivedKDF);
-	 var pspec = passspec.split(":");
-	 if(pspec[0] == "nb64") {
-	   $scope.toPass = doB64N(passspec, derivedKDF);
-	 } else {
-	   $scope.toPass = "invalid:" + passspec;
-	 }
+	 $scope.toPass = passfromspec(passspec, derivedKDF);
        }
        $scope.filesave = function(filename) {
 	 var blob = new Blob([$scope.exportForm], {type: "text/plain;charset=utf-8"});
