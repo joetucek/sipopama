@@ -5,6 +5,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular.min.js"></script>
     <script src="sjcl.js"></script>
     <script src="scrypt.js"></script>
+    <script src="FileSaver.min.js"></script>
   </head>
   
   <body ng-app="myApp" ng-controller="myCtrl">
@@ -55,7 +56,7 @@
     </div>
     
     <div>
-      For export, copy paste:
+      <input type="text" ng-model="targetFile"><button ng-click="filesave(targetFile)">File Save</button> Or, copy paste:
       <div>
 	{{exportForm}}
       </div>
@@ -126,10 +127,17 @@
 	   $scope.toPass = "invalid:" + passspec;
 	 }
        }
+       $scope.filesave = function(filename) {
+	 var blob = new Blob([$scope.exportForm], {type: "text/plain;charset=utf-8"});
+	 saveAs(blob, filename);
+       }
        $scope.compKDF = "not yet computed";
        //use 32MB
        scrypt_module_factory(on_ready, {requested_total_memory: 32 * 1048576 });
-
+       $scope.pwlen=20;
+       $scope.kdfselect="pbkdf2";
+       $scope.pwselect="nb64";
+       $scope.pbkdf2n=50000;
        $scope.logins = {
          "thelogin": {"kdf": "pbkdf2:100:saltysalt", "topass": "nb64:10"},
 	 "another": {"kdf": "pbkdf2:100000:asdfasdf", "topass": "nb64:10"},
@@ -137,6 +145,7 @@
          "scryptlongeryet": {"kdf": "scrypt:SodiumChloride:16384:8:5", "topass":"nb64:10"}
        };
        $scope.exportForm = JSON.stringify($scope.logins);
+       $scope.targetFile="export.json";
      });
      function on_ready(scrypt) {
        myScript=scrypt;
