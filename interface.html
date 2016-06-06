@@ -3,7 +3,7 @@
   
   <head>
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular.min.js"></script>
-    <script src="https://bitwiseshiftleft.github.io/sjcl/sjcl.js"></script>
+    <script src="sjcl.js"></script>
     <script src="scrypt.js"></script>
   </head>
   
@@ -18,16 +18,30 @@
       Add a new one:
       <label>Label:</label>
       <input type="text" ng-model="label" placeholder="Site label">
-      <label>Password type:</label>
+      <label>KDF type:</label>
       <select name="kdfsel" ng-model="kdfselect">
 	<option value="pbkdf2">PBKDF2</option>
 	<option value="scrypt">scrypt</option>
 	<!-- Add in customization of kdf -->
       </select>
-      <button ng-click="notimpl">Gimmie</button>
+      <label>Password type</label>
+      <select name="pwsel" ng-model="pwselect">
+	<option value="nb64">NB64</option>
+      </select>
+      <div>
+	<label>PW Length:</label><input type="text" ng-model="pwlen">
+      </div>
+      <div>
+	<label>Rounds:</label><input type="text" ng-model="pbkdf2n">
+	<label>ProvidedSalt:</label><input type="text" ng-model="pbkdfsalt">
+      </div>
+      <button ng-click="genKDF(kdfselect, pwselect, pbkdfsalt, pbkdf2n)">Gimmie</button>
+      <button ng-click="saveIT(kdfselect, pwselect, pbkdfsalt, pbkdf2n)">Save It!</button>
     </div>
     <div>
-      You are making one for {{label}} of tpe {{kdfselect}}
+      You are making one for {{label}} of type {{kdfselect}}<br>
+      {{derivedKDFSpec}} {{derivedtopass}} <br>
+      Proposed Password is {{proposedPass}}
     </div>
     <div>
       <table>
@@ -71,25 +85,32 @@
        return b64ed.substring(0, numChars);
        
      }
+     function kdffromspec(kdfspec, inpw){
+       var spec = kdfspec.split(":");
+       if (spec[0] == "pbkdf2") {
+         return  doPBKDF2(kdfspec, inpw);
+       } else if (spec[0] == "scrypt") {
+	 //We round trip via hex to get into the sjcl format.
+	 return sjcl.codec.hex.toBits(myScript.to_hex
+	   (doScrypt(kdfspec, inpw)));
+       } else {
+          return inpw + kdfspec;
+       }
+     }
      var app = angular.module('myApp', []);
      app.controller('myCtrl', function($scope) {
+       $scope.genKDF = function(kdfsel, pwsel, salt, n) {
+	 $scope.derivedKDFSpec = kdfsel + ":" + n + ":" + salt;
+	 var derivedKDF=kdffromspec($scope.derivedKDFSpec, $scope.myPW);
+	 $scope.derivedtopass = pwsel + ":" + $scope.pwlen
+	 $scope.proposedPass = doB64N($scope.derivedtopass, derivedKDF);
+       }
        $scope.dokdf = function(kdfspec, passspec) {
-         var spec = kdfspec.split(":");
-	 if (spec[0] == "pbkdf2") {
-           $scope.compKDF = doPBKDF2(kdfspec, $scope.myPW);
-	   $scope.dispKDF = sjcl.codec.hex.fromBits($scope.compKDF);
-         } else if (spec[0] == "scrypt") {
-	   //We round trip via hex to get into the sjcl format.
-	   $scope.compKDF = sjcl.codec.hex.toBits(myScript.to_hex
-	     (doScrypt(kdfspec, $scope.myPW)));
-	   $scope.dispKDF = sjcl.codec.hex.fromBits($scope.compKDF);
-	 } else {
-           $scope.compKDF = $scope.myPW + kdfspec;
-	 }
-	 
+	 var derivedKDF=kdffromspec(kdfspec, $scope.myPW);
+	 $scope.dispKDF = sjcl.codec.hex.fromBits(derivedKDF);
 	 var pspec = passspec.split(":");
 	 if(pspec[0] == "nb64") {
-	   $scope.toPass = doB64N(passspec, $scope.compKDF);
+	   $scope.toPass = doB64N(passspec, derivedKDF);
 	 } else {
 	   $scope.toPass = "invalid:" + passspec;
 	 }
