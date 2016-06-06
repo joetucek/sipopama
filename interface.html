@@ -99,11 +99,20 @@
      }
      var app = angular.module('myApp', []);
      app.controller('myCtrl', function($scope) {
-       $scope.genKDF = function(kdfsel, pwsel, salt, n) {
+       $scope.genKDF = function(kdfsel, pwsel, thsalt, n) {
+	 var salt = thsalt;
+	 //TODO - fill in getting entropy and hmaccing it
+	 //sjcl.codec.base64.fromBits(sjcl.misc.hmac(sjcl.codec.utf8String.toBits(thsalt),
+	 //						      sjcl.codec.utf8String.toBits("asdfasdf")),
+	 //				       true, true);
 	 $scope.derivedKDFSpec = kdfsel + ":" + n + ":" + salt;
 	 var derivedKDF=kdffromspec($scope.derivedKDFSpec, $scope.myPW);
 	 $scope.derivedtopass = pwsel + ":" + $scope.pwlen
 	 $scope.proposedPass = doB64N($scope.derivedtopass, derivedKDF);
+       }
+       $scope.saveIT = function(kdfsel, pwsel, salt, n) {
+	 $scope.logins[$scope.label] = {"kdf": $scope.derivedKDFSpec, "topass": $scope.derivedtopass};
+	 $scope.exportForm = JSON.stringify($scope.logins);
        }
        $scope.dokdf = function(kdfspec, passspec) {
 	 var derivedKDF=kdffromspec(kdfspec, $scope.myPW);
