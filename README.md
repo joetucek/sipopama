@@ -3,11 +3,11 @@ Simple Portable Password Manager
 
 Clearly this is a work in progress.  However, it does 2 things:
 
-  1. it takes a user supplied password and does proper salted key derivation, lik e you would hope a website was doing
+  1. it takes a user supplied password and does proper salted key derivation, lik	e you would hope a website was doing
   2. it takes the derived key, and transforms it into a more friendly representation to supply to a webpage
 
 This allows you you have unique passwords per site.  This overall is
-very similaqr to Alan Karp's "Site Password" (see
+very similar to Alan Karp's "Site Password" (see
 http://shiftleft.com/mirrors/www.hpl.hp.com/personal/Alan_Karp/site_password/index.html),
 but updated for more modern crypto and UI.
 
