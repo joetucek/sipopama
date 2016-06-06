@@ -99,12 +99,14 @@
      }
      var app = angular.module('myApp', []);
      app.controller('myCtrl', function($scope) {
+       sjcl.random.startCollectors();
+
+       
        $scope.genKDF = function(kdfsel, pwsel, thsalt, n) {
 	 var salt = thsalt;
-	 //TODO - fill in getting entropy and hmaccing it
-	 //sjcl.codec.base64.fromBits(sjcl.misc.hmac(sjcl.codec.utf8String.toBits(thsalt),
-	 //						      sjcl.codec.utf8String.toBits("asdfasdf")),
-	 //				       true, true);
+	 var mhm = new sjcl.misc.hmac(sjcl.codec.utf8String.toBits(thsalt), sjcl.hash.sha256);
+	 salt = sjcl.codec.base64.fromBits(mhm.encrypt(sjcl.random.randomWords(8, 1)), true,true);
+
 	 $scope.derivedKDFSpec = kdfsel + ":" + n + ":" + salt;
 	 var derivedKDF=kdffromspec($scope.derivedKDFSpec, $scope.myPW);
 	 $scope.derivedtopass = pwsel + ":" + $scope.pwlen
