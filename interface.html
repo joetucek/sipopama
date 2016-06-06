@@ -1,6 +1,8 @@
 <!doctype html>
 <html>
   <!-- TODO clean up the MVC-arity of this -->
+  <!-- TODO proper UI design (aka organize the divs better)-->
+  <!-- TODO make it look pretty (some css) -->
   <head>
     <script src="angular.min.js"></script>
     <script src="sjcl.js"></script>
@@ -12,8 +14,8 @@
     <div>
       <label>Passphrase:</label>
       <input type="text" ng-model="myPW" placeholder="Put in passphrase">
-      <div>KDF is {{dispKDF}}</div>
-      <div>ToPASS is {{toPass}}</div>
+      <!--  for debug only <div>KDF is {{dispKDF}}</div> -->
+      <div>Password is is {{toPass}}</div>
     </div>
     <div>
       Add a new one:
@@ -79,6 +81,12 @@
 				     myScript.encode_utf8(spec[1]),
 				     spec[2], spec[3], spec[4], 64);
      }
+     function dohexN(passspec, kdfed) {
+       var spec = passspec.split(":");
+       var numChars = parseInt(spec[1]);
+       var hexed = sjcl.codec.hex(fromBits(kdfed));
+       return hexed.substring(0, numChars);
+     }
      function doB64N(passspec, kdfed) {
        var spec = passspec.split(":");
        var numChars = parseInt(spec[1]);
@@ -107,8 +115,12 @@
 	 var salt = thsalt;
 	 var mhm = new sjcl.misc.hmac(sjcl.codec.utf8String.toBits(thsalt), sjcl.hash.sha256);
 	 salt = sjcl.codec.base64.fromBits(mhm.encrypt(sjcl.random.randomWords(8, 1)), true,true);
+	 if(kdfsel=="pbkdf2") {
+	   $scope.derivedKDFSpec = kdfsel + ":" + n + ":" + salt;
+	 } else if(kdfsel=="scrypt") {
+	   $scope.derivedKDFSpec = kdfsel + ":" + salt + ":16384:8:" + n;
 
-	 $scope.derivedKDFSpec = kdfsel + ":" + n + ":" + salt;
+	 }
 	 var derivedKDF=kdffromspec($scope.derivedKDFSpec, $scope.myPW);
 	 $scope.derivedtopass = pwsel + ":" + $scope.pwlen
 	 $scope.proposedPass = doB64N($scope.derivedtopass, derivedKDF);
@@ -135,9 +147,9 @@
        //use 32MB
        scrypt_module_factory(on_ready, {requested_total_memory: 32 * 1048576 });
        $scope.pwlen=20;
-       $scope.kdfselect="pbkdf2";
+       $scope.kdfselect="scrypt";
        $scope.pwselect="nb64";
-       $scope.pbkdf2n=50000;
+       $scope.pbkdf2n=3;
        $http.get("./saved.json")
 	    .success(function(response) {$scope.logins = response;
 	      $scope.exportForm = JSON.stringify($scope.logins);});
