@@ -15,7 +15,7 @@
       <label>Passphrase:</label>
       <input type="password" ng-model="myPW" placeholder="Put in passphrase">
       <!--  for debug only <div>KDF is {{dispKDF}}</div> -->
-      <div>Password is is {{toPass}}</div>
+      <div>Password is {{toPass}}</div>
     </div>
     <div>
       Add a new one:
@@ -36,6 +36,7 @@
       <select name="pwsel" ng-model="pwselect">
 	<option value="nb64">NB64</option>
 	<option value="nhex">NHEX</option>
+        <option value="dw">DiceWare (exp) </option>
 	<!-- TODO: add ndiceware or diceware with a spec.
 	     ala "w W w" == word Capword word, or "www" == wordanotherthird
 	     maybe l for letter, n for number, s for symbol, ' ' for space, etc
@@ -78,6 +79,7 @@
     </div>
     <script>
      var myScript;
+      var dicelist = [];
      function doPBKDF2(kdfspec, pw) {
        var spec = kdfspec.split(":");
        //spec is pbkdf2:rounds:salt
@@ -105,7 +107,42 @@
        var numChars = parseInt(spec[1]);
        var b64ed = sjcl.codec.base64.fromBits(kdfed, true, true);
        return b64ed.substring(0, numChars);
-       
+     }
+     function doDW(passspec, kdfed) {
+       var res = "";
+       var off = 0;
+       for( i = 0; i< 4; i++) {
+         var rnd = sjcl.bitArray.extract(kdfed, off, 13);
+         off+=13;
+         if(rnd > 6*6*6*6*6) {
+           //worry about running out of bits later....
+           i--;
+           continue;
+         }
+          if(dicelist.length!=7777)
+            return "This is bad the list is the wrong length";
+          var word = dicelist[rnd%dicelist.length];
+          if(i==0)
+            res = word;
+          else
+           res = res.concat("_", word);
+       }
+       return res;
+     }
+     function defps(passspec) {
+       var spec = passspec.split(":");
+       if(spec[0]=="nb64" || spec[0]=="nhex") {
+         if(isNaN(spec[1]))
+           return spec[0]+":20";
+         else
+           return passspec;
+       }
+       if(spec[0]=="dw") {
+         if(isNaN(spec[1]))
+           return "dw:4";
+         else
+           return passspec;
+       }
      }
      function passfromspec(passspec, inkdf) {
        var spec = passspec.split(":");
@@ -113,6 +150,8 @@
 	 return doB64N(passspec, inkdf);
        } else if (spec[0] == "nhex") {
 	 return dohexN(passspec, inkdf);
+       } else if (spec[0] == "dw") {
+         return doDW(passspec, inkdf)
        } else {
 	 return "some sort of bug or something; this is bad";
        }
@@ -142,10 +181,9 @@
 	   $scope.derivedKDFSpec = kdfsel + ":" + n + ":" + salt;
 	 } else if(kdfsel=="scrypt") {
 	   $scope.derivedKDFSpec = kdfsel + ":" + salt + ":16384:8:" + n;
-
 	 }
 	 var derivedKDF=kdffromspec($scope.derivedKDFSpec, $scope.myPW);
-	 $scope.derivedtopass = pwsel + ":" + $scope.pwlen
+	 $scope.derivedtopass = defps(pwsel + ":" + $scope.pwlen);
 	 $scope.proposedPass = passfromspec($scope.derivedtopass, derivedKDF);
        }
        $scope.saveIT = function(kdfsel, pwsel, salt, n) {
@@ -164,14 +202,26 @@
        $scope.compKDF = "not yet computed";
        //use 32MB
        scrypt_module_factory(on_ready, {requested_total_memory: 32 * 1048576 });
-       $scope.pwlen=20;
+       $scope.pwlen="default";
        $scope.kdfselect="scrypt";
        $scope.pwselect="nb64";
        $scope.pbkdf2n=3;
-       $http.get("./saved.json")
-	    .success(function(response) {$scope.logins = response;
-	      $scope.exportForm = JSON.stringify($scope.logins);});
-       $scope.exportForm = JSON.stringify($scope.logins);
+       $http({method: 'GET', url: "./saved.json", responseType:"json"})
+               .success(function(response) {$scope.logins = response;
+                 $scope.exportForm = response; /*JSON.stringify($scope.logins);*/});
+      $http({method:'GET', url: "./diceware.asc", responseType:"text"})
+       .success(function(response) {
+         dicelist = response.split("\n");
+         for(var i = 0; i<dicelist.length; i++){
+           dicelist[i] = dicelist[i].split('\t')[1];
+         }
+       });
+       /*       $http.get("./diceware.asc", options())
+               .success(function(response) {$scope.diceraw = response;
+               var dli = [];
+               for(var )
+                 $scope.dicelist = JSON.stringify($scope.logins);});*/
+       //$scope.exportForm = JSON.stringify($scope.logins);
        $scope.targetFile="export.json";
      });
      function on_ready(scrypt) {
