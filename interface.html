@@ -1,9 +1,11 @@
 <!doctype html>
-<html>
+<html lang="en">
   <!-- TODO clean up the MVC-arity of this -->
   <!-- TODO proper UI design (aka organize the divs better)-->
   <!-- TODO make it look pretty (some css) -->
   <head>
+    <title>SiPoPaMa</title>
+    <meta charset="UTF-8">
     <script src="angular.min.js"></script>
     <script src="sjcl.js"></script>
     <script src="scrypt.js"></script>
@@ -207,8 +209,11 @@
        $scope.pwselect="nb64";
        $scope.pbkdf2n=3;
        $http({method: 'GET', url: "./saved.json", responseType:"json"})
-               .success(function(response) {$scope.logins = response;
-                 $scope.exportForm = response; /*JSON.stringify($scope.logins);*/});
+               .success(function(response) {
+                 if(response==null)
+                   response = {};
+                 $scope.logins = response;
+                 $scope.exportForm = response;});
       $http({method:'GET', url: "./diceware.asc", responseType:"text"})
        .success(function(response) {
          dicelist = response.split("\n");
