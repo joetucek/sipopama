@@ -16,9 +16,15 @@ function doScrypt(kdfspec, pw) {
     //spec is scrypt:salt:r:N:p
     //note that for javascript, increasing p is best bet since memory is
     //constrained.
-    return myScript.crypto_scrypt(myScript.encode_utf8(pw),
-        myScript.encode_utf8(spec[1]),
-        spec[2], spec[3], spec[4], 64);
+    var use_sjcl_scrypt = false;
+    if(use_sjcl_scrypt) {
+        return sjcl.misc.scrypt(sjcl.codec.utf8String.toBits(pw),
+            sjcl.codec.utf8String.toBits(spec[1]), spec[2], spec[3], spec[4], 64);
+    }else {
+        return myScript.crypto_scrypt(myScript.encode_utf8(pw),
+            myScript.encode_utf8(spec[1]),
+            spec[2], spec[3], spec[4], 64);
+    }
 }
 
 function dohexN(passspec, kdfed) {
