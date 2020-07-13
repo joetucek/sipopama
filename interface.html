@@ -11,30 +11,40 @@
     <script src="scrypt.js"></script>
     <script src="FileSaver.min.js"></script>
     <script src="sipopama-core.js"></script>
+    <!-- TODO figure out how to toggle the display (can you tell I don't know angular) -->
+    <style>
+        .advanced {
+            display: none;
+        }
+    </style>
 </head>
 
 <body ng-app="myApp" ng-controller="myCtrl">
 <div>
-    <label>Passphrase:</label>
+     <label>Passphrase:</label>
     <input ng-model="myPW" placeholder="Put in passphrase" type="password">
     <!--  for debug only <div>KDF is {{dispKDF}}</div> -->
     <div>Password is {{toPass}}</div>
 </div>
 <div>
+    <h1>Saved logins</h1>
+    <table>
+        <tr ng-repeat="(key, value) in logins">
+            <td>{{ key }}</td>
+            <td class="advanced">{{ value.kdf }}</td>
+            <td class="advanced">{{ value.topass}}</td>
+            <td>
+                <button ng-click="dokdf(value.kdf, value.topass)">GetKDF</button>
+            </td>
+        </tr>
+    </table>
+</div>
+<div>
+    <h1>Add a new login</h1>
     Add a new one:
     <label>Label:</label>
     <input ng-model="label" placeholder="Site label" type="text">
-    <label>KDF type:</label>
-    <select name="kdfsel" ng-model="kdfselect">
-        <option value="pbkdf2">PBKDF2</option>
-        <option value="scrypt">scrypt</option>
-        <!-- Add in customization of kdf? -->
-        <!-- TODO: bcrypt -->
-        <!-- TODO: figure out how to change defaults when selectbox changes -->
-        <!-- TODO: figure out how to change visible options when selectbox
-             changes -->
-        <!-- TODO: dont hardcode all of the scrypt params -->
-    </select>
+    <label>PW Length:</label><input ng-model="pwlen" type="text">
     <label>Password type</label>
     <select name="pwsel" ng-model="pwselect">
         <option value="nb64">NB64</option>
@@ -46,9 +56,19 @@
            -->
     </select>
     <div>
-        <label>PW Length:</label><input ng-model="pwlen" type="text">
+        <label>KDF type:</label>
+        <select name="kdfsel" ng-model="kdfselect">
+            <option value="pbkdf2">PBKDF2</option>
+            <option value="scrypt">scrypt</option>
+            <!-- Add in customization of kdf? -->
+            <!-- TODO: bcrypt -->
+            <!-- TODO: figure out how to change defaults when selectbox changes -->
+            <!-- TODO: figure out how to change visible options when selectbox
+                 changes -->
+            <!-- TODO: dont hardcode all of the scrypt params -->
+        </select>
     </div>
-    <div>
+    <div class="advanced">
         <label>Rounds:</label><input ng-model="pbkdf2n" type="text">
         <label>ProvidedSalt:</label><input ng-model="pbkdfsalt" type="text">
     </div>
@@ -56,24 +76,15 @@
     <button ng-click="saveIT(kdfselect, pwselect, pbkdfsalt, pbkdf2n)">Save It!</button>
 </div>
 <div>
+    <h1>Preview of new password</h1>
     You are making one for {{label}} of type {{kdfselect}}<br>
-    {{derivedKDFSpec}} {{derivedtopass}} <br>
+    <span class="advanced">{{derivedKDFSpec}} {{derivedtopass}} <br></span>
     Proposed Password is {{proposedPass}}
 </div>
-<div>
-    <table>
-        <tr ng-repeat="(key, value) in logins">
-            <td>{{ key }}</td>
-            <td>{{ value.kdf }}</td>
-            <td>{{ value.topass}}</td>
-            <td>
-                <button ng-click="dokdf(value.kdf, value.topass)">GetKDF</button>
-            </td>
-        </tr>
-    </table>
-</div>
+
 
 <div>
+    <h1>Save/export</h1>
     <!-- TODO allow export to html5 localstorage -->
     <!-- TODO allow export via postback to specificed URL (and import
      from same) -->
@@ -150,6 +161,9 @@
         if(diceware_ready) {
             self_tests();
         }
+    }
+    function toggleDisplay() {
+        isShow = !isShow;
     }
 </script>
 </body>
